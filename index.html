@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Home Resource Plan</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f5f5f3;color:#1a1a1a;min-height:100vh;}
+/* Login */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f3;}
+.login-card{background:#fff;border:0.5px solid #e0e0da;border-radius:16px;padding:2.5rem 2rem;width:320px;box-shadow:0 2px 16px rgba(0,0,0,0.07);}
+.login-logo{font-size:22px;font-weight:600;color:#185FA5;margin-bottom:0.25rem;letter-spacing:-0.5px;}
+.login-sub{font-size:13px;color:#888;margin-bottom:2rem;}
+.login-card label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;}
+.login-card input{width:100%;padding:9px 12px;border:0.5px solid #ccc;border-radius:8px;font-size:14px;background:#fff;color:#1a1a1a;margin-bottom:1rem;}
+.login-card input:focus{outline:none;box-shadow:0 0 0 2px #B5D4F4;border-color:#185FA5;}
+.login-btn{width:100%;background:#185FA5;color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;}
+.login-btn:hover{background:#0C447C;}
+.login-error{color:#A32D2D;font-size:12px;margin-top:8px;display:none;}
+/* App */
+#app{display:none;max-width:820px;margin:0 auto;padding:1.5rem 1rem;}
+.app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+.app-title{font-size:20px;font-weight:600;color:#185FA5;letter-spacing:-0.3px;}
+.app-sub{font-size:12px;color:#888;margin-top:2px;}
+.logout-btn{font-size:12px;color:#888;cursor:pointer;background:none;border:0.5px solid #ddd;border-radius:6px;padding:4px 10px;}
+.logout-btn:hover{background:#f0f0ee;}
+.tabs{display:flex;gap:0;border-bottom:0.5px solid #e0e0da;margin-bottom:1.5rem;}
+.tab{padding:8px 18px;font-size:13px;cursor:pointer;border:none;background:none;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.tab.active{color:#1a1a1a;font-weight:500;border-bottom:2px solid #185FA5;}
+.tab:hover{color:#1a1a1a;}
+.panel{display:none;}.panel.active{display:block;}
+/* Cards */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem;}
+.stat-card{background:#f0f0ee;border-radius:8px;padding:1rem;}
+.stat-label{font-size:10px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.stat-val{font-size:22px;font-weight:600;}
+.hrp-card{border:0.5px solid #e0e0da;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem;background:#fff;}
+.hrp-card.overdue{border-color:#791F1F;background:#FCEBEB;}
+.hrp-card.critical{border-color:#F7C1C1;background:#fff8f8;}
+.hrp-card.warn{border-color:#FAC775;background:#fffbf2;}
+.hrp-item-name{font-size:15px;font-weight:600;margin-bottom:3px;}
+.hrp-meta{font-size:11px;color:#888;margin-bottom:10px;}
+.badge{display:inline-block;font-size:10px;padding:2px 9px;border-radius:20px;font-weight:600;}
+.badge-overdue{background:#791F1F;color:#FCEBEB;}
+.badge-critical{background:#FCEBEB;color:#A32D2D;}
+.badge-warn{background:#FAEEDA;color:#633806;}
+.badge-soon{background:#E6F1FB;color:#0C447C;}
+.badge-ok{background:#EAF3DE;color:#27500A;}
+.overdue-banner{background:#791F1F;color:#FCEBEB;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.overdue-banner .days-late{font-size:22px;font-weight:700;color:#fff;min-width:36px;}
+.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.metric{background:#f5f5f3;border-radius:8px;padding:8px;}
+.metric-lbl{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+.metric-val{font-weight:600;font-size:13px;}
+.metric.overdue-metric{background:#791F1F;}
+.metric.overdue-metric .metric-lbl{color:#F09595;}
+.metric.overdue-metric .metric-val{color:#FCEBEB;}
+/* Timeline */
+.timeline{display:flex;align-items:center;margin:10px 0 8px;}
+.tl-node{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:60px;}
+.tl-dot{width:10px;height:10px;border-radius:50%;}
+.tl-line{flex:1;height:1px;background:#ddd;margin-top:-16px;}
+.tl-date{font-size:10px;font-weight:600;text-align:center;}
+.tl-lbl{font-size:9px;color:#888;text-align:center;line-height:1.3;}
+/* Mini cal */
+.mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:5px;}
+.mcd{font-size:9px;text-align:center;padding:3px 1px;border-radius:3px;color:#888;}
+.mcd.mc-today{background:#E6F1FB;color:#185FA5;font-weight:600;}
+.mcd.mc-order{background:#185FA5;color:#fff;font-weight:600;}
+.mcd.mc-overdue{background:#791F1F;color:#FCEBEF;font-weight:600;}
+.mcd.mc-holiday{background:#FCEBEB;color:#A32D2D;}
+/* BOM table */
+.bom-wrap{border:0.5px solid #e0e0da;border-radius:12px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;font-size:10px;color:#888;padding:7px 10px;border-bottom:0.5px solid #e0e0da;text-transform:uppercase;letter-spacing:.05em;background:#fafafa;}
+td{padding:9px 10px;border-bottom:0.5px solid #e0e0da;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.btn{border:0.5px solid #ccc;border-radius:7px;padding:6px 13px;cursor:pointer;font-size:12px;background:#fff;color:#1a1a1a;}
+.btn:hover{background:#f5f5f3;}
+.btn-primary{background:#185FA5;color:#fff;border-color:#185FA5;}
+.btn-primary:hover{background:#0C447C;}
+.btn-danger{color:#A32D2D;border-color:#F7C1C1;}
+.btn-danger:hover{background:#FCEBEB;}
+.btn-sm{padding:3px 9px;font-size:11px;}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:#fff;border-radius:14px;padding:1.5rem;width:360px;max-width:95vw;}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:1rem;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;}
+.form-group{margin-bottom:10px;}
+.form-group label{font-size:11px;color:#888;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
+.form-group input{width:100%;padding:8px 10px;border:0.5px solid #ccc;border-radius:7px;font-size:13px;background:#fff;color:#1a1a1a;}
+.form-group input:focus{outline:none;box-shadow:0 0 0 2px #B5D4F4;}
+.form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.form-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+/* Full cal */
+.cal-full-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-day-hdr{font-size:10px;text-align:center;color:#888;padding:4px 0;text-transform:uppercase;letter-spacing:.04em;}
+.cal-day-hdr.sun{color:#A32D2D;}
+.cal-cell{min-height:64px;padding:5px 6px;border-radius:8px;border:0.5px solid #e0e0da;background:#fff;}
+.cal-cell.c-today{border:1.5px solid #185FA5;background:#E6F1FB;}
+.cal-cell.c-holiday{background:#FCEBEB;border-color:#F7C1C1;}
+.cal-cell.c-empty{background:transparent;border-color:transparent;}
+.cal-num{font-size:13px;}
+.cal-hname{font-size:8px;color:#A32D2D;margin-top:1px;line-height:1.2;}
+.cal-tag{font-size:8px;border-radius:3px;padding:1px 4px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cal-legend{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem;}
+.cal-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#888;}
+.cal-legend-dot{width:11px;height:11px;border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">HRP</div>
+    <div class="login-sub">Home Resource Plan &middot; Singapore</div>
+    <label>Password</label>
+    <input type="password" id="pw-input" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-error" id="login-error">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-header">
+    <div>
+      <div class="app-title">Home Resource Plan</div>
+      <div class="app-sub">Singapore &middot; inventory purchase planner</div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Sign out</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('hrp')">HRP Plan</button>
+    <button class="tab" onclick="showTab('bom')">BOM Database</button>
+    <button class="tab" onclick="showTab('cal')">Calendar</button>
+  </div>
+
+  <div id="tab-hrp" class="panel active">
+    <div class="stats-grid" id="stats"></div>
+    <div id="hrp-list"></div>
+  </div>
+
+  <div id="tab-bom" class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="font-size:16px;font-weight:600;">BOM database</div>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add item</button>
+    </div>
+    <div class="bom-wrap">
+      <table><thead><tr>
+        <th>Item</th><th>Unit</th><th>Safety stock</th><th>On hand</th><th>Lead time</th><th>Weekly usage</th><th>Status</th><th></th>
+      </tr></thead><tbody id="bom-body"></tbody></table>
+    </div>
+  </div>
+
+  <div id="tab-cal" class="panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div style="font-size:16px;font-weight:600;" id="cal-month-label"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" onclick="calPrev()">&#8592;</button>
+        <button class="btn btn-sm" onclick="calToday()">Today</button>
+        <button class="btn btn-sm" onclick="calNext()">&#8594;</button>
+      </div>
+    </div>
+    <div class="cal-full-grid" id="cal-labels"></div>
+    <div style="margin-top:3px;" class="cal-full-grid" id="cal-full"></div>
+    <div class="cal-legend">
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#E6F1FB;border:1.5px solid #185FA5;"></div> Today</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#185FA5;"></div> Order date</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#791F1F;"></div> Overdue order</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#FCEBEB;border:0.5px solid #F7C1C1;"></div> Public holiday</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add item</div>
+    <div class="form-group"><label>Item name</label><input id="f-name" placeholder="e.g. Toilet Paper"/></div>
+    <div class="form-row" style="margin-bottom:10px;">
+      <div class="form-group" style="margin:0;"><label>Safety stock</label><input id="f-safety" type="number" min="0" step="0.1"/></div>
+      <div class="form-group" style="margin:0;"><label>Qty on hand</label><input id="f-qty" type="number" min="0" step="0.1"/></div>
+      <div class="form-group" style="margin:0;"><label>Lead time (days)</label><input id="f-lead" type="number" min="1" step="1"/></div>
+    </div>
+    <div class="form-row2">
+      <div class="form-group" style="margin:0;"><label>Unit</label><input id="f-unit" placeholder="rolls / kg / litres"/></div>
+      <div class="form-group" style="margin:0;"><label>Weekly usage</label><input id="f-usage" type="number" min="0.1" step="0.1"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Auth ─────────────────────────────────────────────────────────────────────
+const PASSWORD = 'gohkokhin';
+function doLogin(){
+  const v = document.getElementById('pw-input').value;
+  const err = document.getElementById('login-error');
+  if(v === PASSWORD){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    sessionStorage.setItem('hrp_auth','1');
+    renderHRP(); renderBOM();
+  } else {
+    err.style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+function doLogout(){
+  sessionStorage.removeItem('hrp_auth');
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('pw-input').value='';
+}
+if(sessionStorage.getItem('hrp_auth')==='1'){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+const HOLIDAYS={"2026-01-01":"New Year's Day","2026-01-29":"Chinese New Year","2026-01-30":"Chinese New Year","2026-03-20":"Hari Raya Puasa","2026-03-27":"Good Friday","2026-05-01":"Labour Day","2026-05-12":"Vesak Day","2026-05-27":"Hari Raya Haji","2026-08-09":"National Day","2026-10-19":"Deepavali","2026-12-25":"Christmas Day","2025-01-01":"New Year's Day","2025-01-29":"Chinese New Year","2025-01-30":"Chinese New Year","2025-03-31":"Hari Raya Puasa","2025-04-18":"Good Friday","2025-05-01":"Labour Day","2025-05-12":"Vesak Day","2025-06-07":"Hari Raya Haji","2025-08-09":"National Day","2025-10-20":"Deepavali","2025-12-25":"Christmas Day"};
+
+let db = JSON.parse(localStorage.getItem('hrp_db')||'null') || [
+  {id:1,name:"Toilet Paper",unit:"rolls",safety:2,qty:1,lead:7,usage:1},
+  {id:2,name:"Rice",unit:"kg",safety:1,qty:0.5,lead:3,usage:0.5},
+  {id:3,name:"Milk",unit:"litres",safety:1,qty:0,lead:2,usage:0.7},
+];
+let nextId = Math.max(...db.map(i=>i.id), 0)+1;
+let editId = null;
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
+const today=new Date(); today.setHours(0,0,0,0);
+
+function saveDB(){ localStorage.setItem('hrp_db', JSON.stringify(db)); }
+function pad(n){return String(n).padStart(2,'0');}
+function dateKey(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function isHoliday(d){return !!HOLIDAYS[dateKey(d)];}
+function isWeekend(d){return d.getDay()===0||d.getDay()===6;}
+function isShopDay(d){return !isHoliday(d)&&!isWeekend(d);}
+function subtractWorkingDays(from, days){
+  let d=new Date(from), n=0;
+  while(n<days){d.setDate(d.getDate()-1);if(isShopDay(d))n++;}
+  return d;
+}
+function fmtDate(d){const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return `${d.getDate()} ${m[d.getMonth()]}`;}
+
+function calcHRP(item){
+  const daily=item.usage/7;
+  const daysOfStock=daily>0?item.qty/daily:9999;
+  const stockoutDate=new Date(today); stockoutDate.setDate(today.getDate()+Math.floor(daysOfStock));
+  const orderByDate=subtractWorkingDays(stockoutDate,item.lead); orderByDate.setHours(0,0,0,0);
+  const isOverdue=orderByDate<today;
+  const daysLate=isOverdue?Math.round((today-orderByDate)/(86400000)):0;
+  const daysUntilOrder=Math.round((orderByDate-today)/86400000);
+  const qtyToOrder=Math.max(0,Math.round((item.safety*2+(item.usage/7)*14-item.qty)*10)/10);
+  let urgency='ok';
+  if(item.qty===0) urgency='critical';
+  else if(isOverdue) urgency='overdue';
+  else if(daysUntilOrder<=1) urgency='urgent';
+  else if(daysUntilOrder<=3) urgency='soon';
+  return {daysOfStock:Math.round(daysOfStock*10)/10,stockoutDate,orderByDate,isOverdue,daysLate,daysUntilOrder,qtyToOrder,urgency};
+}
+
+function urgencyBadge(u,dl){
+  if(u==='critical') return '<span class="badge badge-critical">Out of stock</span>';
+  if(u==='overdue') return `<span class="badge badge-overdue">Overdue &middot; ${dl}d late</span>`;
+  if(u==='urgent') return '<span class="badge badge-critical">Order today</span>';
+  if(u==='soon') return '<span class="badge badge-warn">Order soon</span>';
+  return '<span class="badge badge-ok">Stock OK</span>';
+}
+
+function renderTimeline(h){
+  const nodes = h.isOverdue
+    ? [{label:'Order was due',date:fmtDate(h.orderByDate),color:'#791F1F'},{label:'Today',date:fmtDate(today),color:'#1D9E75'},{label:'Stockout',date:fmtDate(h.stockoutDate),color:'#E24B4A'}]
+    : [{label:'Today',date:fmtDate(today),color:'#1D9E75'},{label:'Order by',date:fmtDate(h.orderByDate),color:'#185FA5'},{label:'Stockout',date:fmtDate(h.stockoutDate),color:'#E24B4A'}];
+  let html='<div class="timeline">';
+  nodes.forEach((n,i)=>{
+    html+=`<div class="tl-node"><div class="tl-dot" style="background:${n.color};"></div><div class="tl-date" style="color:${n.color};">${n.date}</div><div class="tl-lbl">${n.label}</div></div>`;
+    if(i<nodes.length-1) html+=`<div class="tl-line"></div>`;
+  });
+  return html+'</div>';
+}
+
+function renderMiniCal(h){
+  const ref=h.isOverdue?today:h.orderByDate;
+  const y=ref.getFullYear(),m=ref.getMonth();
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const firstDay=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate();
+  let html=`<div style="margin-top:8px;"><div style="font-size:10px;color:#888;font-weight:500;margin-bottom:3px;">${months[m]} ${y}</div><div class="mini-cal-grid">`;
+  ['S','M','T','W','T','F','S'].forEach(d=>html+=`<div style="font-size:8px;text-align:center;color:#aaa;padding:2px 0;">${d}</div>`);
+  for(let i=0;i<firstDay;i++) html+=`<div class="mcd"></div>`;
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d); dt.setHours(0,0,0,0);
+    const isT=dt.getTime()===today.getTime();
+    const isO=dt.getTime()===h.orderByDate.getTime();
+    const isH=isHoliday(dt);
+    let cls='mcd';
+    if(isO&&h.isOverdue) cls+=' mc-overdue';
+    else if(isO) cls+=' mc-order';
+    else if(isT) cls+=' mc-today';
+    else if(isH) cls+=' mc-holiday';
+    html+=`<div class="${cls}">${d}</div>`;
+  }
+  return html+'</div></div>';
+}
+
+// ── HRP render ────────────────────────────────────────────────────────────────
+function renderHRP(){
+  const overdue=db.filter(i=>{const h=calcHRP(i);return h.isOverdue||h.urgency==='critical';}).length;
+  const soon=db.filter(i=>calcHRP(i).urgency==='soon').length;
+  const urgent=db.filter(i=>calcHRP(i).urgency==='urgent').length;
+  document.getElementById('stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total items</div><div class="stat-val">${db.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-val" style="color:${overdue>0?'#791F1F':'inherit'};">${overdue}</div></div>
+    <div class="stat-card"><div class="stat-label">Order today</div><div class="stat-val" style="color:${urgent>0?'#A32D2D':'inherit'};">${urgent}</div></div>
+    <div class="stat-card"><div class="stat-label">Order soon</div><div class="stat-val" style="color:${soon>0?'#633806':'inherit'};">${soon}</div></div>`;
+  const order={critical:0,overdue:1,urgent:2,soon:3,ok:4};
+  const sorted=[...db].sort((a,b)=>order[calcHRP(a).urgency]-order[calcHRP(b).urgency]);
+  document.getElementById('hrp-list').innerHTML=sorted.map(item=>{
+    const h=calcHRP(item);
+    let cls='hrp-card';
+    if(h.urgency==='overdue'||h.urgency==='critical') cls+=' overdue';
+    else if(h.urgency==='urgent') cls+=' critical';
+    else if(h.urgency==='soon') cls+=' warn';
+    const overdueBanner=h.isOverdue?`<div class="overdue-banner"><div class="days-late">${h.daysLate}d</div><div>Order was due <strong>${fmtDate(h.orderByDate)}</strong> — <strong>${h.daysLate} day${h.daysLate!==1?'s':''} late</strong>. Order <strong>${h.qtyToOrder} ${item.unit}</strong> immediately. Stockout on ${fmtDate(h.stockoutDate)}.</div></div>`:'';
+    const critBanner=(h.urgency==='critical'&&!h.isOverdue)?`<div style="background:#FCEBEB;border:0.5px solid #F7C1C1;border-radius:8px;padding:8px 12px;font-size:12px;color:#791F1F;margin-bottom:10px;">No stock — order <strong>${h.qtyToOrder} ${item.unit}</strong> now.</div>`:'';
+    return `<div class="${cls}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <div><div class="hrp-item-name">${item.name}</div><div class="hrp-meta">${item.qty} ${item.unit} on hand &middot; ${item.usage} ${item.unit}/wk &middot; ${item.lead}d lead time</div></div>
+        ${urgencyBadge(h.urgency,h.daysLate)}
+      </div>
+      ${overdueBanner}${critBanner}
+      <div class="metric-row">
+        <div class="metric"><div class="metric-lbl">Stock lasts</div><div class="metric-val">${h.daysOfStock===9999?'∞':h.daysOfStock+'d'}</div></div>
+        <div class="metric ${h.isOverdue?'overdue-metric':''}"><div class="metric-lbl">Order by</div><div class="metric-val">${fmtDate(h.orderByDate)} ${h.isOverdue?'&#9888;':''}</div></div>
+        <div class="metric"><div class="metric-lbl">Qty to order</div><div class="metric-val">${h.qtyToOrder} ${item.unit}</div></div>
+      </div>
+      ${renderTimeline(h)}
+      ${renderMiniCal(h)}
+    </div>`;
+  }).join('');
+}
+
+// ── BOM render ────────────────────────────────────────────────────────────────
+function renderBOM(){
+  document.getElementById('bom-body').innerHTML=db.map(item=>{
+    const h=calcHRP(item);
+    return `<tr>
+      <td style="font-weight:600;">${item.name}</td>
+      <td style="color:#888;">${item.unit}</td>
+      <td>${item.safety}</td><td>${item.qty}</td><td>${item.lead}d</td><td>${item.usage}/wk</td>
+      <td>${urgencyBadge(h.urgency,h.daysLate)}</td>
+      <td><div style="display:flex;gap:5px;">
+        <button class="btn btn-sm" onclick="openEditModal(${item.id})">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteItem(${item.id})">Del</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openAddModal(){
+  editId=null;
+  document.getElementById('modal-title').textContent='Add item';
+  ['f-name','f-safety','f-qty','f-lead','f-unit','f-usage'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function openEditModal(id){
+  editId=id;
+  const item=db.find(i=>i.id===id);
+  document.getElementById('modal-title').textContent='Edit item';
+  document.getElementById('f-name').value=item.name;
+  document.getElementById('f-safety').value=item.safety;
+  document.getElementById('f-qty').value=item.qty;
+  document.getElementById('f-lead').value=item.lead;
+  document.getElementById('f-unit').value=item.unit;
+  document.getElementById('f-usage').value=item.usage;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
+document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+function saveItem(){
+  const name=document.getElementById('f-name').value.trim();
+  const safety=parseFloat(document.getElementById('f-safety').value);
+  const qty=parseFloat(document.getElementById('f-qty').value);
+  const lead=parseInt(document.getElementById('f-lead').value);
+  const unit=document.getElementById('f-unit').value.trim()||'units';
+  const usage=parseFloat(document.getElementById('f-usage').value);
+  if(!name||isNaN(safety)||isNaN(qty)||isNaN(lead)||isNaN(usage)){alert('Please fill all fields.');return;}
+  if(editId) Object.assign(db.find(i=>i.id===editId),{name,safety,qty,lead,unit,usage});
+  else db.push({id:nextId++,name,unit,safety,qty,lead,usage});
+  saveDB(); closeModal(); renderBOM(); renderHRP();
+}
+function deleteItem(id){
+  if(!confirm('Delete this item?'))return;
+  db=db.filter(i=>i.id!==id); saveDB(); renderBOM(); renderHRP();
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+function renderFullCal(){
+  const months=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  document.getElementById('cal-month-label').textContent=`${months[calMonth]} ${calYear}`;
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('cal-labels').innerHTML=days.map((d,i)=>`<div class="cal-day-hdr ${i===0?'sun':''}">${d}</div>`).join('');
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const dim=new Date(calYear,calMonth+1,0).getDate();
+  const orderMap={};
+  db.forEach(item=>{
+    const h=calcHRP(item);
+    const k=dateKey(h.orderByDate);
+    if(!orderMap[k])orderMap[k]={items:[],overdue:false};
+    orderMap[k].items.push(item.name);
+    if(h.isOverdue)orderMap[k].overdue=true;
+  });
+  let html='';
+  for(let i=0;i<firstDay;i++) html+=`<div class="cal-cell c-empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(calYear,calMonth,d); dt.setHours(0,0,0,0);
+    const k=dateKey(dt);
+    const isT=dt.getTime()===today.getTime();
+    const isH=isHoliday(dt);
+    const entry=orderMap[k];
+    const isSun=dt.getDay()===0;
+    let cls='cal-cell';
+    if(isT) cls+=' c-today';
+    else if(isH) cls+=' c-holiday';
+    let numColor=isT?'#185FA5':isSun?'#A32D2D':'#1a1a1a';
+    let tags=entry?entry.items.map(n=>`<div class="cal-tag" style="background:${entry.overdue?'#791F1F':'#185FA5'};color:#fff;">${n}</div>`).join(''):'';
+    html+=`<div class="${cls}">
+      <span class="cal-num" style="color:${numColor};font-weight:${isT?'600':'400'};">${d}</span>
+      ${isH?`<div class="cal-hname">${HOLIDAYS[k]}</div>`:''}
+      ${tags}
+    </div>`;
+  }
+  document.getElementById('cal-full').innerHTML=html;
+}
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderFullCal();}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderFullCal();}
+function calToday(){calYear=today.getFullYear();calMonth=today.getMonth();renderFullCal();}
+
+// ── Tab nav ───────────────────────────────────────────────────────────────────
+function showTab(t){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>{if(b.getAttribute('onclick').includes("'"+t+"'"))b.classList.add('active');});
+  if(t==='cal'){renderFullCal();}
+  if(t==='bom'){renderBOM();}
+}
+
+if(sessionStorage.getItem('hrp_auth')==='1'){renderHRP();renderBOM();}
+</script>
+</body>
+</html>
