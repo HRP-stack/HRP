@@ -83,6 +83,8 @@ tr:last-child td{border-bottom:none;}
 .btn-danger{color:#A32D2D;border-color:#F7C1C1;}
 .btn-danger:hover{background:#FCEBEB;}
 .btn-sm{padding:3px 9px;font-size:11px;}
+/* Guest read-only notice */
+.guest-notice{background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:8px;padding:8px 14px;font-size:12px;color:#185FA5;margin-bottom:1rem;}
 /* Modal */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;}
 .modal-overlay.show{display:flex;}
@@ -91,10 +93,13 @@ tr:last-child td{border-bottom:none;}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;}
 .form-group{margin-bottom:10px;}
 .form-group label{font-size:11px;color:#888;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
-.form-group input{width:100%;padding:8px 10px;border:0.5px solid #ccc;border-radius:7px;font-size:13px;background:#fff;color:#1a1a1a;}
-.form-group input:focus{outline:none;box-shadow:0 0 0 2px #B5D4F4;}
+.form-group input,.form-group select{width:100%;padding:8px 10px;border:0.5px solid #ccc;border-radius:7px;font-size:13px;background:#fff;color:#1a1a1a;}
+.form-group input:focus,.form-group select:focus{outline:none;box-shadow:0 0 0 2px #B5D4F4;}
 .form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .form-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+/* Delete confirm modal */
+.modal-danger-title{font-size:16px;font-weight:600;margin-bottom:0.5rem;color:#A32D2D;}
+.modal-danger-msg{font-size:13px;color:#666;margin-bottom:1rem;}
 /* Full cal */
 .cal-full-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
 .cal-day-hdr{font-size:10px;text-align:center;color:#888;padding:4px 0;text-transform:uppercase;letter-spacing:.04em;}
@@ -109,6 +114,9 @@ tr:last-child td{border-bottom:none;}
 .cal-legend{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem;}
 .cal-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#888;}
 .cal-legend-dot{width:11px;height:11px;border-radius:3px;}
+/* Inline edit row */
+.edit-row td{background:#f0f6ff;padding:6px 10px;}
+.edit-row input,.edit-row select{width:100%;padding:4px 6px;border:0.5px solid #B5D4F4;border-radius:5px;font-size:12px;background:#fff;color:#1a1a1a;}
 </style>
 </head>
 <body>
@@ -147,15 +155,20 @@ tr:last-child td{border-bottom:none;}
   </div>
 
   <div id="tab-bom" class="panel">
+    <div id="guest-bom-notice" style="display:none;" class="guest-notice">&#128274; Guest view — read only. Sign in as admin to add, edit or delete items.</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
       <div style="font-size:16px;font-weight:600;">BOM database</div>
-      <button class="btn btn-primary" onclick="openAddModal()">+ Add item</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="bom-search" type="text" placeholder="Search items..." oninput="renderBOM()" style="padding:6px 10px;border:0.5px solid #ccc;border-radius:7px;font-size:12px;width:160px;"/>
+        <button class="btn btn-primary" id="add-item-btn" onclick="openAddModal()">+ Add item</button>
+      </div>
     </div>
     <div class="bom-wrap">
       <table><thead><tr>
         <th>Item</th><th>Unit</th><th>Safety stock</th><th>On hand</th><th>Lead time</th><th>Weekly usage</th><th>Status</th><th></th>
       </tr></thead><tbody id="bom-body"></tbody></table>
     </div>
+    <div id="bom-empty" style="display:none;text-align:center;padding:2rem;color:#888;font-size:13px;">No items match your search.</div>
   </div>
 
   <div id="tab-cal" class="panel">
@@ -178,7 +191,7 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- MODAL -->
+<!-- ADD / EDIT MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <div class="modal-title" id="modal-title">Add item</div>
@@ -199,16 +212,39 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="delete-overlay">
+  <div class="modal">
+    <div class="modal-danger-title">Delete item?</div>
+    <div class="modal-danger-msg" id="delete-msg">This cannot be undone.</div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Auth ─────────────────────────────────────────────────────────────────────
-const PASSWORD = 'gohkokhin';
+// Accounts: {username, password, role}
+// role: 'admin' = full access, 'guest' = read-only
+const ACCOUNTS = [
+  {username:'admin', password:'bobby', role:'admin'},
+  {username:'guest', password:'guest', role:'guest'}
+];
+let currentRole = 'guest';
+
 function doLogin(){
-  const v = document.getElementById('pw-input').value;
+  const v = document.getElementById('pw-input').value.trim();
   const err = document.getElementById('login-error');
-  if(v === PASSWORD){
+  const match = ACCOUNTS.find(a => a.password === v);
+  if(match){
+    currentRole = match.role;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     sessionStorage.setItem('hrp_auth','1');
+    sessionStorage.setItem('hrp_role', match.role);
+    applyRoleUI();
     renderHRP(); renderBOM();
   } else {
     err.style.display='block';
@@ -218,13 +254,23 @@ function doLogin(){
 }
 function doLogout(){
   sessionStorage.removeItem('hrp_auth');
+  sessionStorage.removeItem('hrp_role');
+  currentRole='guest';
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('pw-input').value='';
+  document.getElementById('login-error').style.display='none';
+}
+function applyRoleUI(){
+  const isGuest = currentRole === 'guest';
+  document.getElementById('add-item-btn').style.display = isGuest ? 'none' : 'inline-block';
+  document.getElementById('guest-bom-notice').style.display = isGuest ? 'block' : 'none';
 }
 if(sessionStorage.getItem('hrp_auth')==='1'){
+  currentRole = sessionStorage.getItem('hrp_role') || 'guest';
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
+  applyRoleUI();
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -237,6 +283,7 @@ let db = JSON.parse(localStorage.getItem('hrp_db')||'null') || [
 ];
 let nextId = Math.max(...db.map(i=>i.id), 0)+1;
 let editId = null;
+let deleteId = null;
 let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 const today=new Date(); today.setHours(0,0,0,0);
 
@@ -352,29 +399,41 @@ function renderHRP(){
 
 // ── BOM render ────────────────────────────────────────────────────────────────
 function renderBOM(){
-  document.getElementById('bom-body').innerHTML=db.map(item=>{
+  const isGuest = currentRole === 'guest';
+  const searchVal = (document.getElementById('bom-search').value || '').toLowerCase();
+  const filtered = db.filter(item => item.name.toLowerCase().includes(searchVal));
+
+  document.getElementById('bom-empty').style.display = filtered.length === 0 ? 'block' : 'none';
+
+  document.getElementById('bom-body').innerHTML = filtered.map(item=>{
     const h=calcHRP(item);
+    const actionBtns = isGuest
+      ? `<td><span style="font-size:11px;color:#aaa;">View only</span></td>`
+      : `<td><div style="display:flex;gap:5px;">
+          <button class="btn btn-sm btn-primary" onclick="openEditModal(${item.id})">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="openDeleteModal(${item.id})">Delete</button>
+        </div></td>`;
     return `<tr>
       <td style="font-weight:600;">${item.name}</td>
       <td style="color:#888;">${item.unit}</td>
       <td>${item.safety}</td><td>${item.qty}</td><td>${item.lead}d</td><td>${item.usage}/wk</td>
       <td>${urgencyBadge(h.urgency,h.daysLate)}</td>
-      <td><div style="display:flex;gap:5px;">
-        <button class="btn btn-sm" onclick="openEditModal(${item.id})">Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteItem(${item.id})">Del</button>
-      </div></td>
+      ${actionBtns}
     </tr>`;
   }).join('');
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openAddModal(){
+  if(currentRole==='guest') return;
   editId=null;
   document.getElementById('modal-title').textContent='Add item';
   ['f-name','f-safety','f-qty','f-lead','f-unit','f-usage'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('f-name').focus(), 100);
 }
 function openEditModal(id){
+  if(currentRole==='guest') return;
   editId=id;
   const item=db.find(i=>i.id===id);
   document.getElementById('modal-title').textContent='Edit item';
@@ -385,9 +444,11 @@ function openEditModal(id){
   document.getElementById('f-unit').value=item.unit;
   document.getElementById('f-usage').value=item.usage;
   document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('f-name').focus(), 100);
 }
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
 function saveItem(){
   const name=document.getElementById('f-name').value.trim();
   const safety=parseFloat(document.getElementById('f-safety').value);
@@ -400,10 +461,25 @@ function saveItem(){
   else db.push({id:nextId++,name,unit,safety,qty,lead,usage});
   saveDB(); closeModal(); renderBOM(); renderHRP();
 }
-function deleteItem(id){
-  if(!confirm('Delete this item?'))return;
-  db=db.filter(i=>i.id!==id); saveDB(); renderBOM(); renderHRP();
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function openDeleteModal(id){
+  if(currentRole==='guest') return;
+  deleteId=id;
+  const item=db.find(i=>i.id===id);
+  document.getElementById('delete-msg').textContent=`Delete "${item.name}"? This cannot be undone.`;
+  document.getElementById('delete-overlay').classList.add('show');
 }
+function closeDeleteModal(){
+  document.getElementById('delete-overlay').classList.remove('show');
+  deleteId=null;
+}
+function confirmDelete(){
+  if(!deleteId) return;
+  db=db.filter(i=>i.id!==deleteId);
+  saveDB(); closeDeleteModal(); renderBOM(); renderHRP();
+}
+document.getElementById('delete-overlay').addEventListener('click',function(e){if(e.target===this)closeDeleteModal();});
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 function renderFullCal(){
